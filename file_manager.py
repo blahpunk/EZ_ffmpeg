@@ -1,5 +1,6 @@
 import os
 import threading
+import shutil
 from PyQt5.QtWidgets import QFileDialog, QTableWidgetItem, QApplication
 from PyQt5.QtCore import Qt, pyqtSignal, QObject
 import mimetypes
@@ -15,7 +16,7 @@ class FileLoader(QObject):
 
     def list_files(self, folder_path):
         print(f"Listing files in folder: {folder_path}")
-        for root, _, files in os.walk(folder_path):
+        for root, dirs, files in os.walk(folder_path):
             for file in files:
                 file_path = os.path.join(root, file)
                 mime_type, _ = mimetypes.guess_type(file_path)
@@ -43,15 +44,19 @@ class FileManager(QObject):
     def browse_folder(self):
         folder_path = QFileDialog.getExistingDirectory(self.main_window, "Select Folder")
         if folder_path:
-            self.main_window.current_folder = os.path.normpath(folder_path)
-            self.main_window.files_list.clear()
+            self.main_window.current_folder = os.path.normpath(folder_path).replace('\\', '/')
+            self.main_window.folder_path_label.setText(f"Folder: {self.main_window.current_folder}")
             self.main_window.file_table.setRowCount(0)
-            self.file_loader.list_files(folder_path)
+            self.main_window.files_list = []
+            self.processed_files.clear()
+            print(f"Selected folder: {folder_path}")
+            threading.Thread(target=self.file_loader.list_files, args=(self.main_window.current_folder,)).start()
 
-    def add_file_to_table(self, file, size):
+    def add_file_to_table(self, filename, size):
+        print(f"Adding file to table: {filename}, size: {size} MB")
         row = self.main_window.file_table.rowCount()
         self.main_window.file_table.insertRow(row)
-        self.main_window.file_table.setItem(row, 0, QTableWidgetItem(file))
+        self.main_window.file_table.setItem(row, 0, QTableWidgetItem(filename))
         self.main_window.file_table.setItem(row, 1, QTableWidgetItem("Queued"))
         self.main_window.file_table.setItem(row, 2, NumericTableWidgetItem(size))
         for i in range(3, 7):
