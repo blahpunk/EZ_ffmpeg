@@ -1,14 +1,14 @@
 # EZ_ffmpeg
 
 ## Overview
-EZ_ffmpeg is a Python-based GUI application designed to simplify video and audio processing tasks. The application allows users to batch process video files by normalizing audio levels and converting the audio to stereo format. The UI is sleek and intuitive, featuring a dark theme with dark aqua accents.
+EZ_ffmpeg is a Python-based GUI application that provides an intuitive interface for adjusting video settings. The app allows users to configure various video and audio processing options, including converting the primary audio track to stereo, adjusting MB/min rate, and batch processing multiple video files. The user interface is designed with a sleek, futuristic dark theme featuring dark aqua accents.
 
 ## Features
-- **Audio Normalization:** Automatically normalizes the audio of the primary track using ffmpeg's capabilities.
-- **Stereo Conversion:** Converts the primary audio track to stereo format while preserving the original video and subtitle tracks.
+- **Adjustable Video Settings:** Easily configure video processing options such as MB/min rate, audio track conversion, and more through the user interface.
+- **Stereo Conversion:** Convert the primary audio track to stereo format while preserving the original video and subtitle tracks.
 - **Batch Processing:** Queue multiple video files and process them sequentially.
-- **Customizable Settings:** Adjust the MB/min rate and choose whether to replace the original files.
-- **User-Friendly Interface:** Monitor processing progress with a responsive, visually appealing interface.
+- **File Replacement Option:** Choose whether to replace the original file with the processed one.
+- **User-Friendly Interface:** Monitor processing progress with real-time updates in a visually appealing interface.
 
 ## Requirements
 - Python 3.8+
@@ -46,8 +46,8 @@ Ensure `ffmpeg` is installed and accessible via the command line:
 2. **Select a Folder**:
    - Use the "Browse" button to select the folder containing the video files you want to process.
 
-3. **Adjust Settings**:
-   - Use the MB/min slider and checkboxes to customize the processing settings according to your needs.
+3. **Adjust Video Settings**:
+   - Utilize the user interface to adjust various video settings such as the MB/min rate and audio track conversion options.
 
 4. **Start Processing**:
    - Click the "Start" button to begin processing. The application will display real-time progress and status updates.
