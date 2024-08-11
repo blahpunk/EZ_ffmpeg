@@ -1,0 +1,61 @@
+QPushButton {
+    font: bold 14px;
+    color: white;
+    background-color: rgba(51, 51, 51, 180); /* Semi-transparent background for buttons */
+    border: 2px solid #555555;
+    padding: 5px;
+    border-radius: 10px;
+}
+
+QTableWidget {
+    background-color: rgba(0, 0, 0, 120); /* Darker semi-transparent background for better readability */
+    gridline-color: #333333;
+    color: #ffffff;
+}
+
+QTableWidget::item {
+    background-color: rgba(0, 0, 0, 50); /* Lighter semi-transparency for items to see background */
+    color: white;
+}
+
+QHeaderView::section {
+    background-color: rgba(51, 51, 51, 180); /* Semi-transparent background for column headers */
+    padding: 4px;
+    border: 1px solid #444444;
+    font-size: 12px;
+    color: white;
+}
+
+QLabel, QCheckBox, QLineEdit {
+    font: 12px;
+    color: #ffffff;
+    background-color: rgba(0, 0, 0, 50); /* Semi-transparent background for labels, checkboxes, and text input */
+    padding: 2px;
+    border-radius: 5px;
+}
+
+QSlider::groove:horizontal, QSlider::groove:vertical {
+    border: 1px solid #bbb;
+    background: #333;
+    height: 10px;
+    border-radius: 4px;
+}
+
+QSlider::handle:horizontal, QSlider::handle:vertical {
+    background: #444;
+    border: 1px solid #444;
+    width: 14px;
+    height: 14px;
+    margin: -4px 0; /* centering the handle */
+    border-radius: 7px;
+}
+
+QFrame#sliderFrame {
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 5px;
+    padding: 5px;
+}
+
+QSlider#horizontalSlider {
+    max-height: 20px;
+}
