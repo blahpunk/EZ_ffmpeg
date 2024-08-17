@@ -59,3 +59,20 @@ QFrame#sliderFrame {
 QSlider#horizontalSlider {
     max-height: 20px;
 }
+
+/* ProgressBar Styling */
+QProgressBar {
+    background-color: rgba(0, 0, 0, 50); /* Semi-transparent background */
+    border: 2px solid #444444;
+    border-radius: 10px;
+    text-align: center; /* Center text */
+    color: #ffffff; /* White text color */
+    font: bold 14px; /* Bold font for better readability */
+}
+
+QProgressBar::chunk {
+    background-color: #00cc66; /* Green color for the progress chunk */
+    border-radius: 10px;
+}
+
+/* End of style.qss */
