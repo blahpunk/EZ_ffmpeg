@@ -1,5 +1,8 @@
+<<<<<<< HEAD
 # .\file_manager.py
 
+=======
+>>>>>>> origin/main
 import os
 import threading
 import shutil
