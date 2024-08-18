@@ -1,9 +1,11 @@
+# main.py
+
 import sys
 import os
 import configparser
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QPushButton, QHBoxLayout, QVBoxLayout,
-    QWidget, QTableWidget, QTableWidgetItem, QHeaderView, QSlider, QCheckBox, QLabel, QFrame, QLineEdit, QProgressBar, QGridLayout
+    QWidget, QTableWidget, QTableWidgetItem, QHeaderView, QSlider, QCheckBox, QLabel, QFrame, QLineEdit, QGridLayout, QProgressBar
 )
 from PyQt5.QtGui import QPixmap, QPalette, QBrush, QFont
 from PyQt5.QtCore import Qt
@@ -16,6 +18,7 @@ class MainWindow(QMainWindow):
         self.files_list = []  # List to store file paths
         self.current_speed = ''  # Initialize the current speed display
         self.initUI()
+
         # Connect the progress_updated signal to the update_progress method
         self.file_manager.video_processor.progress_updated.connect(self.update_progress)
         self.file_manager.video_processor.speed_updated.connect(self.update_speed)
@@ -47,18 +50,22 @@ class MainWindow(QMainWindow):
 
         # Add Normalize checkbox
         self.normalize_checkbox = QCheckBox("Normalize")
+        self.normalize_checkbox.setChecked(True)
         grid_layout.addWidget(self.normalize_checkbox, 0, 0)
 
         # Add Stereo checkbox
         self.stereo_checkbox = QCheckBox("Stereo")
+        self.stereo_checkbox.setChecked(True)
         grid_layout.addWidget(self.stereo_checkbox, 0, 1)
 
         # Add Replace checkbox
         self.replace_checkbox = QCheckBox("Replace")
+        self.replace_checkbox.setChecked(True)
         grid_layout.addWidget(self.replace_checkbox, 1, 0)
 
         # Add Convert checkbox
         self.convert_checkbox = QCheckBox("Convert")
+        self.convert_checkbox.setChecked(True)
         grid_layout.addWidget(self.convert_checkbox, 1, 1)
 
         # Add the options frame to the top row layout
@@ -128,12 +135,12 @@ class MainWindow(QMainWindow):
         layout.addLayout(top_row_layout)
 
         # File table
-        self.file_table = QTableWidget(0, 8)
-        self.file_table.setHorizontalHeaderLabels(["Filename", "Status", "MB before", "MB/min before", "Length", "MB after", "MB/min after", "Progress"])
+        self.file_table = QTableWidget(0, 7)
+        self.file_table.setHorizontalHeaderLabels(["Filename", "Status", "MB before", "MB/min before", "Length", "MB after", "MB/min after"])
 
         # Set the section resize mode for the filename column
         self.file_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
-        for i in range(1, 7):
+        for i in range(1, 6):
             self.file_table.horizontalHeader().setSectionResizeMode(i, QHeaderView.ResizeToContents)
 
         self.file_table.horizontalHeader().setFont(QFont("Arial", 10, QFont.Bold))
@@ -178,7 +185,7 @@ class MainWindow(QMainWindow):
             self.progress_bar.setValue(0)  # Reset the progress bar to 0%
             self.progress_bar.setFormat("%p%")  # Reset the progress bar format
 
-    def update_progress(self, row, progress):
+    def update_progress(self, progress):
         # Update progress with percentage and speed if available
         speed = self.current_speed if self.current_speed else ''
         self.progress_bar.setFormat(f"{progress:.1f}% {speed}")
@@ -217,8 +224,8 @@ class MainWindow(QMainWindow):
         if os.path.exists('settings.ini'):
             config.read('settings.ini')
             settings = config['Settings']
-            self.normalize_checkbox.setChecked(settings.getboolean('normalize', False))
-            self.stereo_checkbox.setChecked(settings.getboolean('stereo', False))
+            self.normalize_checkbox.setChecked(settings.getboolean('normalize', True))
+            self.stereo_checkbox.setChecked(settings.getboolean('stereo', True))
             self.replace_checkbox.setChecked(settings.getboolean('replace', True))
             self.convert_checkbox.setChecked(settings.getboolean('convert', True))
 
