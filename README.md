@@ -1,7 +1,6 @@
 
 # EZ_ffmpeg
 
-
 ## Screenshots
 
 ![EZ_ffmpeg GUI Screenshot](screenshots/09-04-2024_01.jpg)
@@ -34,28 +33,6 @@ pip install PyQt5
 
 1. Clone the repository:
 
-=======
-# EZ_ffmpeg
-
-## Overview
-EZ_ffmpeg is a Python-based GUI application that provides an intuitive interface for adjusting video settings. The app allows users to configure various video and audio processing options, including converting the primary audio track to stereo, adjusting MB/min rate, and batch processing multiple video files. The user interface is designed with a sleek, futuristic dark theme featuring dark aqua accents.
-
-## Features
-- **Adjustable Video Settings:** Easily configure video processing options such as MB/min rate, audio track conversion, and more through the user interface.
-- **Stereo Conversion:** Convert the primary audio track to stereo format while preserving the original video and subtitle tracks.
-- **Batch Processing:** Queue multiple video files and process them sequentially.
-- **File Replacement Option:** Choose whether to replace the original file with the processed one.
-- **User-Friendly Interface:** Monitor processing progress with real-time updates in a visually appealing interface.
-
-## Requirements
-- Python 3.8+
-- `ffmpeg` installed and accessible from the command line.
-- Python packages:
-  - PyQt5
-
-## Installation
-
-### Clone the Repository
 ```bash
 git clone https://github.com/blahpunk/EZ_ffmpeg.git
 cd EZ_ffmpeg
@@ -63,9 +40,6 @@ cd EZ_ffmpeg
 
 2. Install the required Python packages:
 
-=======
-### Install Dependencies
-Install the required Python packages:
 ```bash
 pip install -r requirements.txt
 ```
@@ -140,7 +114,7 @@ This project is licensed under the MIT License. See the LICENSE file for more de
 
 - **ffmpeg:** The powerful multimedia framework used for processing video and audio.
 - **PyQt5:** The Python bindings for the Qt application framework, used to create the user interface.
-=======
+
 ### Setting Up `ffmpeg`
 Ensure `ffmpeg` is installed and accessible via the command line:
 - **Windows**: Add the `ffmpeg` binary to your PATH.
