@@ -1,6 +1,10 @@
-<<<<<<< HEAD
 
 # EZ_ffmpeg
+
+
+## Screenshots
+
+![EZ_ffmpeg GUI Screenshot](screenshots/09-04-2024_01.jpg)
 
 EZ_ffmpeg is a simple yet powerful tool designed to shrink video files using the x265 encoding format and 192kbps MP3 audio. The application allows users to easily control the size of the output video by specifying an MB/min value, offering a straightforward way to optimize video storage and quality. Additionally, EZ_ffmpeg provides options for audio normalization and stereo flattening, ensuring that your media files maintain consistent audio quality. The application also includes presets that allow users to quickly select predefined ratios for optimal media output.
 
@@ -52,24 +56,20 @@ EZ_ffmpeg is a Python-based GUI application that provides an intuitive interface
 ## Installation
 
 ### Clone the Repository
->>>>>>> origin/main
 ```bash
 git clone https://github.com/blahpunk/EZ_ffmpeg.git
 cd EZ_ffmpeg
 ```
 
-<<<<<<< HEAD
 2. Install the required Python packages:
 
 =======
 ### Install Dependencies
 Install the required Python packages:
->>>>>>> origin/main
 ```bash
 pip install -r requirements.txt
 ```
 
-<<<<<<< HEAD
 3. Run the application:
 
 ```bash
@@ -175,4 +175,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgements
 Special thanks to the `ffmpeg` community for their powerful media processing tools.
->>>>>>> origin/main
