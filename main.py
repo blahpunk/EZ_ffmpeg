@@ -1,5 +1,3 @@
-# main.py
-
 import sys
 import os
 import configparser
@@ -131,6 +129,12 @@ class MainWindow(QMainWindow):
         self.start_button.clicked.connect(self.on_start_pressed)
         top_row_layout.addWidget(self.start_button)
 
+        # Add Estimate button (Toggle between Estimate/Cancel)
+        self.estimate_button = QPushButton("Estimate")
+        self.estimate_button.setFixedSize(100, 100)
+        self.estimate_button.clicked.connect(self.on_estimate_pressed)
+        top_row_layout.addWidget(self.estimate_button)
+
         # Add the top row layout to the main layout
         layout.addLayout(top_row_layout)
 
@@ -184,6 +188,26 @@ class MainWindow(QMainWindow):
             self.file_manager.stop_processing()
             self.progress_bar.setValue(0)  # Reset the progress bar to 0%
             self.progress_bar.setFormat("%p%")  # Reset the progress bar format
+
+    def on_estimate_pressed(self):
+        if self.estimate_button.text() == "Estimate":
+            self.estimate_button.setText("Cancel")
+            self.file_manager.estimate_mb_min()
+        else:
+            self.estimate_button.setText("Estimate")
+            self.file_manager.stop_estimation()
+
+    def reset_start_button(self):
+        """
+        Reset the Start/Stop button to the 'Start' state after processing is done.
+        """
+        self.start_button.setText("Start")
+
+    def reset_estimate_button(self):
+        """
+        Reset the Estimate/Cancel button to the 'Estimate' state after estimation is done.
+        """
+        self.estimate_button.setText("Estimate")
 
     def update_progress(self, progress):
         # Update progress with percentage and speed if available
@@ -241,5 +265,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-# End of main.py

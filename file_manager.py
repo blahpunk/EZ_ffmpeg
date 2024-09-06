@@ -34,6 +34,7 @@ class FileManager(QObject):
         self.stop_requested = False
         self.processed_files = set()
         self.processing_thread = None
+        self.estimate_thread = None
         self.file_loader = FileLoader(main_window)
         self.file_loader.file_loaded.connect(self.add_file_to_table)
         self.video_processor = VideoProcessor(main_window)
@@ -82,6 +83,9 @@ class FileManager(QObject):
             print(f"Processing file: {file_path}, size: {size} MB")
             self.processed_files.add(file_path)
             self.video_processor.process_video(row, file_path, size)
+        
+        # When the queue is finished, reset the Start/Stop button
+        self.main_window.reset_start_button()
 
     def stop_processing(self):
         self.stop_requested = True
@@ -90,14 +94,60 @@ class FileManager(QObject):
     def update_length(self, row, length):
         print(f"Updating length for row {row}: {length}")
         self.main_window.file_table.setItem(row, 4, QTableWidgetItem(length))
+        self.main_window.file_table.viewport().update()  # Force table update to refresh UI
 
     def update_mb_per_min(self, row, mb_per_min):
         print(f"Updating MB/min for row {row}: {mb_per_min}")
         self.main_window.file_table.setItem(row, 3, NumericTableWidgetItem(mb_per_min))
+        self.main_window.file_table.viewport().update()  # Force table update to refresh UI
 
     def update_status(self, row, status):
         try:
             print(f"Updating status for row {row}: {status}")
             self.main_window.file_table.setItem(row, 1, QTableWidgetItem(status))
+            self.main_window.file_table.viewport().update()  # Force table update to refresh UI
         except Exception as e:
             print(f"Error updating status for row {row}: {e}")
+
+    def estimate_mb_min(self):
+        """
+        Start the estimation of MB/min for each video file in the queue without processing the file.
+        """
+        if not self.estimate_thread or not self.estimate_thread.is_alive():
+            self.stop_requested = False
+            print("Starting estimation thread")
+            self.estimate_thread = threading.Thread(target=self._estimate_mb_min)
+            self.estimate_thread.start()
+
+    def _estimate_mb_min(self):
+        """
+        Perform the actual estimation process in a separate thread.
+        """
+        for row, (file_path, size) in enumerate(self.main_window.files_list):
+            if self.stop_requested:
+                print("Estimation canceled")
+                break
+            print(f"Estimating MB/min for file: {file_path}")
+            length_seconds = self.video_processor.get_video_length(file_path)
+            if length_seconds is not None:
+                length_formatted = self.video_processor.format_length(length_seconds)
+                minutes = length_seconds / 60
+                mb_per_min = size / (minutes if minutes else 1)
+
+                # Update the table with estimated values
+                self.update_length(row, length_formatted)
+                self.update_mb_per_min(row, mb_per_min)
+                self.update_status(row, "Estimated")
+            else:
+                self.update_status(row, "Error estimating")
+            QApplication.processEvents()
+
+        # When estimation is done, reset the Estimate/Cancel button
+        self.main_window.reset_estimate_button()
+
+    def stop_estimation(self):
+        """
+        Stop the estimation process if it's running.
+        """
+        self.stop_requested = True
+        print("Stop estimation requested")

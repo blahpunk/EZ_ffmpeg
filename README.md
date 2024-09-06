@@ -15,6 +15,8 @@ EZ_ffmpeg is a simple yet powerful tool designed to shrink video files using the
 - **Presets:** Quickly apply predefined settings for Movies, Television, and Animation for optimal media output.
 - **Customizable Options:** Adjust MB/min value, apply normalization, stereo flattening, and decide whether to replace the original file.
 - **User-Friendly Interface:** A clean and intuitive UI that allows even novice users to shrink videos with ease.
+- **Estimation Mode:** The Estimate button allows users to estimate the MB/min for each file without processing, helping users plan and optimize file conversion.
+- **Start/Stop Toggle:** Both the Start and Estimate buttons toggle between Start/Stop and Estimate/Cancel states, respectively, providing clear controls for the current operation.
 
 ## Getting Started
 
@@ -69,7 +71,9 @@ After launching the application, follow these steps:
     - **Television:** Adjusts settings for television shows.
     - **Animation:** Lowers the MB/min value and threshold for animated content, which typically requires less bitrate.
 
-4. **Start:** Once all settings are configured, click "Start" to begin processing your files.
+4. **Estimate Mode:** Use the "Estimate" button to estimate the MB/min value for files in the queue without performing any actual processing. The button will toggle between "Estimate" and "Cancel," providing flexibility during estimation.
+
+5. **Start Processing:** Once all settings are configured, click "Start" to begin processing your files. The "Start" button will toggle between "Start" and "Stop" states, allowing you to pause or cancel the process.
 
 ## User Interface (UI) Elements
 
@@ -86,6 +90,7 @@ After launching the application, follow these steps:
 
 - **Browse:** Opens a file dialog to select the folder containing video files to be processed.
 - **Start/Stop:** Begins the processing of files or stops the ongoing process.
+- **Estimate/Cancel:** Begins estimation of MB/min values or cancels the ongoing estimation.
 - **Movies/Television/Animation:** Applies predefined settings for quick optimization based on content type.
 
 ### Table
@@ -134,7 +139,10 @@ Ensure `ffmpeg` is installed and accessible via the command line:
 3. **Adjust Video Settings**:
    - Utilize the user interface to adjust various video settings such as the MB/min rate and audio track conversion options.
 
-4. **Start Processing**:
+4. **Estimate File Size**:
+   - Click the "Estimate" button to estimate the MB/min value for each file in the queue without processing.
+
+5. **Start Processing**:
    - Click the "Start" button to begin processing. The application will display real-time progress and status updates.
 
 ## Contributing
