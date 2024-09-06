@@ -9,6 +9,13 @@ from PyQt5.QtGui import QPixmap, QPalette, QBrush, QFont
 from PyQt5.QtCore import Qt
 from file_manager import FileManager, NumericTableWidgetItem
 
+def resource_path(relative_path):
+    """Get absolute path to resource, works for dev and for PyInstaller"""
+    if hasattr(sys, '_MEIPASS'):
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        return os.path.join(sys._MEIPASS, relative_path)
+    return os.path.join(os.path.abspath("."), relative_path)
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -219,7 +226,7 @@ class MainWindow(QMainWindow):
         self.current_speed = speed
 
     def apply_background(self):
-        background_path = os.path.join(os.path.dirname(__file__), 'background.png')
+        background_path = resource_path('background.png')
         pixmap = QPixmap(background_path)
         if not pixmap.isNull():
             palette = QPalette()
@@ -227,10 +234,14 @@ class MainWindow(QMainWindow):
             self.setPalette(palette)
         else:
             print("Failed to load background image")
-
+            
     def apply_stylesheet(self):
-        with open('style.qss', 'r') as f:
-            self.setStyleSheet(f.read())
+        style_path = resource_path('style.qss')
+        if os.path.exists(style_path):
+            with open(style_path, 'r') as f:
+                self.setStyleSheet(f.read())
+        else:
+            print("Failed to load stylesheet")
 
     def save_settings(self):
         config = configparser.ConfigParser()
