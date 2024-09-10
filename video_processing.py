@@ -5,7 +5,6 @@ import os
 import shlex
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import pyqtSignal, QObject
-import shutil
 import threading
 from queue import Queue, Empty
 from table_widgets import NumericTableWidgetItem
@@ -43,6 +42,11 @@ class VideoProcessor(QObject):
         seconds = int(seconds % 60)
         return f"{hours:02}:{minutes:02}:{seconds:02}"
 
+    def calculate_mb_per_min(self, size_mb, length_seconds):
+        # Standardized calculation of MB/min
+        minutes = length_seconds / 60
+        return size_mb / (minutes if minutes else 1)
+
     def enqueue_output(self, out, queue):
         try:
             for line in iter(out.readline, ''):
@@ -61,23 +65,29 @@ class VideoProcessor(QObject):
             if length_seconds is not None:
                 self.status_updated.emit(row, "Calculating MB/min")
                 length_formatted = self.format_length(length_seconds)
-                minutes = length_seconds / 60
-                mb_per_min_before = size / (minutes if minutes else 1)
-                self.length_detected.emit(row, length_formatted)
-                self.mb_per_min_detected.emit(row, mb_per_min_before)
+                mb_per_min_before = self.calculate_mb_per_min(size, length_seconds)
 
+                # Update MB/min before column immediately at the start of processing
+                self.main_window.file_table.setItem(row, 3, NumericTableWidgetItem(mb_per_min_before))
+                self.length_detected.emit(row, length_formatted)
+
+                # If Convert checkbox is checked, proceed with conversion logic
                 if self.main_window.convert_checkbox.isChecked():
                     mb_min_target = self.main_window.mb_min_slider.value()
                     threshold = float(self.main_window.threshold_input.text())
+                    # Skip file if MB/min is below the target threshold
                     if mb_per_min_before < (mb_min_target + threshold):
                         self.status_updated.emit(row, "Skipped")
-                        print(f"File skipped: {file_path}")
+                        # Set MB after and MB/min after with the same values as the before columns
+                        self.main_window.file_table.setItem(row, 5, NumericTableWidgetItem(size))  # MB after
+                        self.main_window.file_table.setItem(row, 6, NumericTableWidgetItem(mb_per_min_before))  # MB/min after
                         return
 
+                    # Proceed with conversion if not skipped
                     output_file = os.path.splitext(file_path)[0] + '_processed' + os.path.splitext(file_path)[1]
-                    target_bitrate = (mb_min_target * 1024 * 1024 * 8) / 60 * 0.9  # Apply a 10% reduction to account for overhead or efficiency gains by the codec
+                    target_bitrate = (mb_min_target * 1024 * 1024 * 8) / 60 * 0.9
                     audio_bitrate = 192 * 1024  # 192 kbps in bits/sec
-                    video_bitrate = target_bitrate - audio_bitrate  # Subtract audio bitrate from target
+                    video_bitrate = target_bitrate - audio_bitrate
 
                     cmd = [
                         'ffmpeg', '-i', file_path,
@@ -92,11 +102,10 @@ class VideoProcessor(QObject):
 
                     if self.main_window.normalize_checkbox.isChecked():
                         cmd.extend(['-af', 'dynaudnorm'])
-
                     if self.main_window.stereo_checkbox.isChecked():
                         cmd.extend(['-ac', '2'])
 
-                    self.status_updated.emit(row, "Compressing")
+                    self.status_updated.emit(row, "Processing")
                     process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1)
                     q = Queue()
                     threading.Thread(target=self.enqueue_output, args=(process.stderr, q)).start()
@@ -108,7 +117,6 @@ class VideoProcessor(QObject):
                             if process.poll() is not None:
                                 break
                         else:
-                            # Handle progress and speed values, accounting for 'N/A' or missing values
                             if "time=" in line:
                                 try:
                                     time_index = line.find("time=")
@@ -120,17 +128,14 @@ class VideoProcessor(QObject):
                                     self.progress_updated.emit(progress)
                                     self.status_updated.emit(row, "Processing")
                                 except (ValueError, IndexError):
-                                    self.progress_updated.emit(0)  # If parsing fails, show as "Calculating"
+                                    self.progress_updated.emit(0)
                                     self.status_updated.emit(row, "Calculating...")
 
                             if "speed=" in line:
                                 speed_index = line.find("speed=")
                                 speed = line[speed_index:].split(' ')[0].split('=')[1]
-                                if speed == 'N/A':
-                                    self.speed_updated.emit("Calculating...")
-                                else:
-                                    self.speed_updated.emit(speed)
-                                    self.status_updated.emit(row, "Processing")
+                                self.speed_updated.emit(speed)
+                                self.status_updated.emit(row, "Processing")
 
                             print(line.strip())
                             QApplication.processEvents()
@@ -139,7 +144,7 @@ class VideoProcessor(QObject):
                     if process.returncode == 0:
                         self.status_updated.emit(row, "Finalizing")
                         output_size_mb = os.path.getsize(output_file) / (1024 * 1024)
-                        mb_per_min_after = output_size_mb / (minutes if minutes else 1)
+                        mb_per_min_after = self.calculate_mb_per_min(output_size_mb, length_seconds)
 
                         length_check = abs(self.get_video_length(output_file) - length_seconds) <= 8
                         mb_check = output_size_mb < size
@@ -152,9 +157,9 @@ class VideoProcessor(QObject):
                             error_message += "size mismatch, " if not mb_check else ""
                             error_message += "MB/min threshold mismatch" if not mb_per_min_check else ""
                             self.status_updated.emit(row, error_message.strip(", "))
-                            print(error_message.strip(", "))
                             return
 
+                        # Update MB after and MB/min after with the output file's data
                         self.main_window.file_table.setItem(row, 5, NumericTableWidgetItem(output_size_mb))
                         self.main_window.file_table.setItem(row, 6, NumericTableWidgetItem(mb_per_min_after))
 
@@ -167,7 +172,7 @@ class VideoProcessor(QObject):
                         self.status_updated.emit(row, f"Error: {error_message}")
                         print(f"Error processing file: {error_message}")
                 else:
-                    # Handle non-conversion case
+                    # Handle case when Convert is not checked
                     if self.main_window.normalize_checkbox.isChecked() or self.main_window.stereo_checkbox.isChecked():
                         output_file = os.path.splitext(file_path)[0] + '_processed' + os.path.splitext(file_path)[1]
                         cmd = ['ffmpeg', '-i', file_path, '-map', '0:v', '-map', '0:a', '-map', '0:s?', '-c:s', 'copy', '-y', output_file]
@@ -198,9 +203,7 @@ class VideoProcessor(QObject):
 
                             if not length_check:
                                 os.remove(output_file)
-                                error_message = f"Error: Processing failed for file {file_path} due to length mismatch."
-                                self.status_updated.emit(row, error_message)
-                                print(error_message)
+                                self.status_updated.emit(row, "Error: Length mismatch")
                                 return
 
                             if self.main_window.replace_checkbox.isChecked():
@@ -212,15 +215,12 @@ class VideoProcessor(QObject):
                             self.status_updated.emit(row, f"Error: {error_message}")
                             print(f"Error processing file: {error_message}")
                     else:
-                        # If Convert, Normalize, and Stereo are all unchecked, just skip processing
                         self.status_updated.emit(row, "Skipped")
-                        print(f"File skipped (no processing required): {file_path}")
-                self.length_detected.emit(row, length_formatted)
-                self.mb_per_min_detected.emit(row, mb_per_min_before)
-                QApplication.processEvents()
+                        self.main_window.file_table.setItem(row, 5, NumericTableWidgetItem(size))
+                        self.main_window.file_table.setItem(row, 6, NumericTableWidgetItem(mb_per_min_before))
             else:
                 self.length_detected.emit(row, "Error")
-                self.mb_per_min_detected.emit(row, 0.0)  # Emit 0.0 if length detection fails
+                self.mb_per_min_detected.emit(row, 0.0)
                 self.status_updated.emit(row, "Error")
         except Exception as e:
             self.status_updated.emit(row, f"Exception: {e}")
@@ -229,11 +229,13 @@ class VideoProcessor(QObject):
     def replace_file(self, original_path, new_path):
         try:
             if not os.access(original_path, os.W_OK):
-                print(f"Removing read-only attribute from {original_path}")
                 os.chmod(original_path, 0o666)
             shutil.move(new_path, original_path)
         except Exception as e:
-            error_message = f"Error replacing file {original_path}: {e}"
-            print(error_message)
-
-# End of video_processing.py
+            print(f"Error replacing file {original_path}: {e}")
+            self.status_updated.emit(row, f"Error: Failed to replace file {original_path}")
+            print(f"Failed to replace file {original_path}: {e}")
+        else:
+            # If successful, emit a completed status update
+            self.status_updated.emit(row, "File replaced successfully")
+            print(f"File replaced: {original_path}")
