@@ -3,7 +3,7 @@
 
 ## Screenshots
 
-![EZ_ffmpeg GUI Screenshot](screenshots/09-05-2024_01.jpg)
+![EZ_ffmpeg GUI Screenshot](screenshots/09-10-2024_01.jpg)
 
 EZ_ffmpeg is a simple yet powerful tool designed to shrink video files using the x265 encoding format and 192kbps MP3 audio. The application allows users to easily control the size of the output video by specifying an MB/min value, offering a straightforward way to optimize video storage and quality. Additionally, EZ_ffmpeg provides options for audio normalization and stereo flattening, ensuring that your media files maintain consistent audio quality. The application also includes presets that allow users to quickly select predefined ratios for optimal media output.
 
