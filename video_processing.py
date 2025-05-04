@@ -20,9 +20,8 @@ class VideoProcessor(QObject):
     def __init__(self, main_window):
         super().__init__()
         self.main_window = main_window
-        # Set up a cache folder named 'ez_ffmpeg' in the system's temporary directory
         self.cache_folder = os.path.join(tempfile.gettempdir(), "ez_ffmpeg")
-        os.makedirs(self.cache_folder, exist_ok=True)  # Ensure cache folder exists
+        os.makedirs(self.cache_folder, exist_ok=True)
 
     def get_video_length(self, file_path):
         normalized_file_path = os.path.normpath(file_path)
@@ -33,8 +32,7 @@ class VideoProcessor(QObject):
             if result.returncode == 0:
                 return float(result.stdout.strip())
             else:
-                error_message = result.stderr.strip()
-                print(f"Error getting video length: {error_message}")
+                print(f"Error getting video length: {result.stderr.strip()}")
                 return None
         except Exception as e:
             print(f"Exception getting video length: {e}")
@@ -60,149 +58,143 @@ class VideoProcessor(QObject):
             out.close()
 
     def delete_cached_file(self, cached_file_path):
-        """Retry deleting the cached file if access is initially denied."""
         retries = 3
-        delay = 1  # seconds
+        delay = 1
         for attempt in range(retries):
             try:
                 if os.path.exists(cached_file_path):
-                    os.chmod(cached_file_path, 0o666)  # Set permissions if necessary
+                    os.chmod(cached_file_path, 0o666)
                     os.remove(cached_file_path)
                     print(f"Deleted cached file: {cached_file_path}")
                     break
-            except PermissionError as e:
+            except PermissionError:
                 print(f"Attempt {attempt + 1}: Permission denied while deleting {cached_file_path}. Retrying...")
-                time.sleep(delay)  # Wait a bit before retrying
+                time.sleep(delay)
             except Exception as e:
                 print(f"Error deleting cached file {cached_file_path}: {e}")
                 break
 
     def process_video(self, row, file_path, size):
         process = None
-        cached_file_path = os.path.join(self.cache_folder, os.path.basename(file_path))
+        error_output = []
         try:
-            # Copy file to local cache folder in the 'ez_ffmpeg' temp directory
-            if not os.path.exists(cached_file_path):
-                shutil.copy2(file_path, cached_file_path)
-                print(f"Copied {file_path} to cache as {cached_file_path}")
-
             self.status_updated.emit(row, "Detecting video length")
-            length_seconds = self.get_video_length(cached_file_path)
+            length_seconds = self.get_video_length(file_path)
             if length_seconds is not None:
                 self.status_updated.emit(row, "Calculating MB/min")
                 length_formatted = self.format_length(length_seconds)
                 mb_per_min_before = self.calculate_mb_per_min(size, length_seconds)
 
-                # Update MB/min before column immediately at the start of processing
                 self.main_window.file_table.setItem(row, 3, NumericTableWidgetItem(mb_per_min_before))
                 self.length_detected.emit(row, length_formatted)
 
-                if self.main_window.convert_checkbox.isChecked():
-                    mb_min_target = self.main_window.mb_min_slider.value()
-                    threshold = float(self.main_window.threshold_input.text())
-                    if mb_per_min_before < (mb_min_target + threshold):
-                        self.status_updated.emit(row, "Skipped")
-                        self.main_window.file_table.setItem(row, 5, NumericTableWidgetItem(size))
-                        self.main_window.file_table.setItem(row, 6, NumericTableWidgetItem(mb_per_min_before))
-                        self.delete_cached_file(cached_file_path)
-                        return
-
-                    output_file = os.path.join(self.cache_folder, os.path.splitext(os.path.basename(file_path))[0] + '_processed' + os.path.splitext(file_path)[1])
-                    target_bitrate = (mb_min_target * 1024 * 1024 * 8) / 60 * 0.9
-                    audio_bitrate = 192 * 1024
-                    video_bitrate = target_bitrate - audio_bitrate
-
-                    cmd = [
-                        'ffmpeg', '-i', cached_file_path,
-                        '-map', '0:v', '-map', '0:a', '-map', '0:s?',
-                        '-c:v', 'libx265', '-b:v', f'{int(video_bitrate / 1000)}k',
-                        '-maxrate', f'{int(video_bitrate / 1000)}k',
-                        '-bufsize', f'{int(video_bitrate / 500)}k',
-                        '-c:a', 'libmp3lame', '-b:a', '192k',
-                        '-c:s', 'copy',
-                        '-y', output_file
-                    ]
-
-                    if self.main_window.normalize_checkbox.isChecked():
-                        cmd.extend(['-af', 'dynaudnorm'])
-                    if self.main_window.stereo_checkbox.isChecked():
-                        cmd.extend(['-ac', '2'])
-
-                    self.status_updated.emit(row, "Processing")
-                    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1)
-                    q = Queue()
-                    threading.Thread(target=self.enqueue_output, args=(process.stderr, q)).start()
-
-                    while True:
-                        try:
-                            line = q.get_nowait()
-                        except Empty:
-                            if process and process.poll() is not None:
-                                break
-                        else:
-                            if "time=" in line:
-                                try:
-                                    time_index = line.find("time=")
-                                    progress_str = line[time_index:].split(' ')[0]
-                                    progress_time = progress_str.split('=')[1]
-                                    h, m, s = map(float, progress_time.split(':'))
-                                    progress_seconds = int(h * 3600 + m * 60 + s)
-                                    progress = (progress_seconds / length_seconds) * 100
-                                    self.progress_updated.emit(progress)
-                                    self.status_updated.emit(row, "Processing")
-                                except (ValueError, IndexError):
-                                    self.progress_updated.emit(0)
-                                    self.status_updated.emit(row, "Calculating...")
-
-                            if "speed=" in line:
-                                speed_index = line.find("speed=")
-                                speed = line[speed_index:].split(' ')[0].split('=')[1]
-                                self.speed_updated.emit(speed)
-                                self.status_updated.emit(row, "Processing")
-
-                            print(line.strip())
-                            QApplication.processEvents()
-
-                    process.wait()
-                    if process.returncode == 0:
-                        self.status_updated.emit(row, "Finalizing")
-                        output_size_mb = os.path.getsize(output_file) / (1024 * 1024)
-                        mb_per_min_after = self.calculate_mb_per_min(output_size_mb, length_seconds)
-
-                        length_check = abs(self.get_video_length(output_file) - length_seconds) <= 8
-                        mb_check = output_size_mb < size
-                        mb_per_min_check = mb_per_min_after < (mb_min_target + threshold)
-
-                        if not (length_check and mb_check and mb_per_min_check):
-                            os.remove(output_file)
-                            error_message = f"Error: Processing failed for file {file_path} due to "
-                            error_message += "length mismatch, " if not length_check else ""
-                            error_message += "size mismatch, " if not mb_check else ""
-                            error_message += "MB/min threshold mismatch" if not mb_per_min_check else ""
-                            self.status_updated.emit(row, error_message.strip(", "))
-                            self.delete_cached_file(cached_file_path)
-                            return
-
-                        self.main_window.file_table.setItem(row, 5, NumericTableWidgetItem(output_size_mb))
-                        self.main_window.file_table.setItem(row, 6, NumericTableWidgetItem(mb_per_min_after))
-
-                        if self.main_window.replace_checkbox.isChecked():
-                            self.status_updated.emit(row, "Replacing")
-                            self.replace_file(file_path, output_file, row)
-                            self.delete_cached_file(cached_file_path)  # Delete cached copy after replacement
-                        self.status_updated.emit(row, "Completed")
-                    else:
-                        error_message = process.stderr.read().strip()
-                        self.status_updated.emit(row, f"Error: {error_message}")
-                        print(f"Error processing file: {error_message}")
-                        self.delete_cached_file(cached_file_path)
-
-                else:
+                mb_min_target = self.main_window.mb_min_slider.value()
+                threshold = float(self.main_window.threshold_input.text())
+                if mb_per_min_before < (mb_min_target + threshold):
                     self.status_updated.emit(row, "Skipped")
                     self.main_window.file_table.setItem(row, 5, NumericTableWidgetItem(size))
                     self.main_window.file_table.setItem(row, 6, NumericTableWidgetItem(mb_per_min_before))
-                    self.delete_cached_file(cached_file_path)
+                    return
 
+                cached_file_path = os.path.join(self.cache_folder, os.path.basename(file_path))
+                if not os.path.exists(cached_file_path):
+                    shutil.copy2(file_path, cached_file_path)
+                    print(f"Copied {file_path} to cache as {cached_file_path}")
+
+                output_file = os.path.join(
+                    self.cache_folder,
+                    os.path.splitext(os.path.basename(file_path))[0] + '_processed' + os.path.splitext(file_path)[1]
+                )
+                target_bitrate = (mb_min_target * 1024 * 1024 * 8) / 60 * 0.9
+                audio_bitrate = 192 * 1024
+                video_bitrate = target_bitrate - audio_bitrate
+
+                cmd = [
+                    'ffmpeg', '-i', cached_file_path,
+                    '-map', '0:v', '-map', '0:a', '-map', '0:s?',
+                    '-c:v', 'libx265', '-b:v', f'{int(video_bitrate / 1000)}k',
+                    '-maxrate', f'{int(video_bitrate / 1000)}k',
+                    '-bufsize', f'{int(video_bitrate / 500)}k',
+                    '-c:a', 'libmp3lame', '-b:a', '192k',
+                    '-c:s', 'copy',
+                    '-y', output_file
+                ]
+
+                if self.main_window.normalize_checkbox.isChecked():
+                    cmd.extend(['-af', 'dynaudnorm'])
+                if self.main_window.stereo_checkbox.isChecked():
+                    cmd.extend(['-ac', '2'])
+
+                self.status_updated.emit(row, "Processing")
+                process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1)
+                q = Queue()
+                threading.Thread(target=self.enqueue_output, args=(process.stderr, q)).start()
+
+                while True:
+                    try:
+                        line = q.get_nowait()
+                    except Empty:
+                        if process and process.poll() is not None:
+                            break
+                    else:
+                        error_output.append(line.strip())
+                        if "time=" in line:
+                            try:
+                                time_index = line.find("time=")
+                                progress_str = line[time_index:].split(' ')[0]
+                                progress_time = progress_str.split('=')[1]
+                                h, m, s = map(float, progress_time.split(':'))
+                                progress_seconds = int(h * 3600 + m * 60 + s)
+                                progress = (progress_seconds / length_seconds) * 100
+                                self.progress_updated.emit(progress)
+                                self.status_updated.emit(row, "Processing")
+                            except (ValueError, IndexError):
+                                self.progress_updated.emit(0)
+                                self.status_updated.emit(row, "Calculating...")
+
+                        if "speed=" in line:
+                            speed_index = line.find("speed=")
+                            speed = line[speed_index:].split(' ')[0].split('=')[1]
+                            self.speed_updated.emit(speed)
+                            self.status_updated.emit(row, "Processing")
+
+                        print(line.strip())
+                        QApplication.processEvents()
+
+                process.wait()
+                if process.returncode == 0:
+                    self.status_updated.emit(row, "Finalizing")
+                    output_size_mb = os.path.getsize(output_file) / (1024 * 1024)
+                    mb_per_min_after = self.calculate_mb_per_min(output_size_mb, length_seconds)
+
+                    output_length = self.get_video_length(output_file)
+                    length_check = output_length is not None and abs(output_length - length_seconds) <= 8
+                    mb_check = output_size_mb < size
+                    mb_per_min_check = mb_per_min_after < (mb_min_target + threshold)
+
+                    if not (length_check and mb_check and mb_per_min_check):
+                        os.remove(output_file)
+                        error_message = f"Error: Processing failed for file {file_path} due to "
+                        error_message += "length mismatch, " if not length_check else ""
+                        error_message += "size mismatch, " if not mb_check else ""
+                        error_message += "MB/min threshold mismatch" if not mb_per_min_check else ""
+                        self.status_updated.emit(row, error_message.strip(", "))
+                        self.delete_cached_file(cached_file_path)
+                        return
+
+                    self.main_window.file_table.setItem(row, 5, NumericTableWidgetItem(output_size_mb))
+                    self.main_window.file_table.setItem(row, 6, NumericTableWidgetItem(mb_per_min_after))
+
+                    if self.main_window.replace_checkbox.isChecked():
+                        self.status_updated.emit(row, "Replacing")
+                        self.replace_file(file_path, output_file, row)
+                        self.delete_cached_file(cached_file_path)
+                    self.status_updated.emit(row, "Completed")
+                else:
+                    last_lines = " | ".join(error_output[-3:]) if error_output else "Unknown error"
+                    self.status_updated.emit(row, f"Error: {last_lines}")
+                    print(f"Error processing file: {last_lines}")
+                    self.delete_cached_file(cached_file_path)
             else:
                 self.length_detected.emit(row, "Error")
                 self.mb_per_min_detected.emit(row, 0.0)
@@ -210,10 +202,6 @@ class VideoProcessor(QObject):
         except Exception as e:
             self.status_updated.emit(row, f"Exception: {e}")
             print(f"Exception occurred: {e}")
-        finally:
-            if process:
-                process.stdout.close()
-                process.stderr.close()
 
     def replace_file(self, original_path, new_path, row):
         try:

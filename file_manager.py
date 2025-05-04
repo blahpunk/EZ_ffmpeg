@@ -74,7 +74,9 @@ class FileManager(QObject):
             self.processing_thread.start()
 
     def _process_files(self):
+        # Ensure the files list is sorted by size in descending order
         sorted_files = sorted(self.main_window.files_list, key=lambda x: x[1], reverse=True)
+
         for row, (file_path, size) in enumerate(sorted_files):
             if self.stop_requested:
                 print("Stop requested, terminating file processing")
@@ -84,9 +86,10 @@ class FileManager(QObject):
             print(f"Processing file: {file_path}, size: {size} MB")
             self.processed_files.add(file_path)
             self.video_processor.process_video(row, file_path, size)
-        
+
         # When the queue is finished, reset the Start/Stop button
         self.main_window.reset_start_button()
+
 
     def stop_processing(self):
         self.stop_requested = True
