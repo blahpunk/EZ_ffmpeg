@@ -7,3 +7,9 @@ Non‑zero return‑code 3221226356 but validations passed.
 
 [ 2025-05-04 16:35:02 ]  RUN
 ffmpeg -i 'C:\Users\eric\AppData\Local\Temp\ez_ffmpeg\Last Man Standing (2011) - S02E18 - College Girl WEBDL-1080p.mkv' -map '-0:d?' -map 0:v:0 -map '0:a?' -map '0:s?' -c:s copy -c:v libx265 -b:v 1313k -maxrate 1313k -bufsize 2626k -c:a libmp3lame -b:a 192k -ac 2 -af dynaudnorm -y 'C:\Users\eric\AppData\Local\Temp\ez_ffmpeg\Last Man Standing (2011) - S02E18 - College Girl WEBDL-1080p_processed.mkv'
+
+[ 2025-05-04 16:41:12 ]  WARN
+Non‑zero return‑code 3221226356 but validations passed.
+
+[ 2025-05-04 16:44:15 ]  RUN
+ffmpeg -i 'C:\Users\eric\AppData\Local\Temp\ez_ffmpeg\Last Man Standing (2011) - S02E15 - Breaking Curfew WEBDL-1080p.mkv' -map '-0:d?' -map 0:v:0 -map '0:a?' -map '0:s?' -c:s copy -c:v libx265 -b:v 1313k -maxrate 1313k -bufsize 2626k -c:a libmp3lame -b:a 192k -ac 2 -af dynaudnorm -y 'C:\Users\eric\AppData\Local\Temp\ez_ffmpeg\Last Man Standing (2011) - S02E15 - Breaking Curfew WEBDL-1080p_processed.mkv'
