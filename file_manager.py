@@ -1,10 +1,9 @@
-# file_manager.py
-
 import os
 import threading
 from PyQt5.QtWidgets import QFileDialog, QTableWidgetItem, QApplication
 from PyQt5.QtCore import Qt, pyqtSignal, QObject
 import mimetypes
+import configparser
 from table_widgets import NumericTableWidgetItem
 from video_processing import VideoProcessor
 
@@ -44,7 +43,14 @@ class FileManager(QObject):
         self.video_processor.status_updated.connect(self.update_status)
 
     def browse_folder(self):
-        folder_path = QFileDialog.getExistingDirectory(self.main_window, "Select Folder")
+        default_path = ''
+        config_path = 'settings.ini'
+        if os.path.exists(config_path):
+            config = configparser.ConfigParser()
+            config.read(config_path)
+            default_path = config.get('Settings', 'last_folder', fallback='')
+
+        folder_path = QFileDialog.getExistingDirectory(self.main_window, "Select Folder", default_path)
         if folder_path:
             self.main_window.current_folder = os.path.normpath(folder_path).replace('\\', '/')
             self.main_window.folder_path_label.setText(f"Folder: {self.main_window.current_folder}")
@@ -52,7 +58,17 @@ class FileManager(QObject):
             self.main_window.files_list = []
             self.processed_files.clear()
             print(f"Selected folder: {folder_path}")
+
+            config = configparser.ConfigParser()
+            config.read(config_path)
+            if 'Settings' not in config:
+                config['Settings'] = {}
+            config['Settings']['last_folder'] = self.main_window.current_folder
+            with open(config_path, 'w') as configfile:
+                config.write(configfile)
+
             threading.Thread(target=self.file_loader.list_files, args=(self.main_window.current_folder,)).start()
+
 
     def add_file_to_table(self, filename, size):
         print(f"Adding file to table: {filename}, size: {size} MB")
@@ -63,7 +79,6 @@ class FileManager(QObject):
         self.main_window.file_table.setItem(row, 2, NumericTableWidgetItem(size))
         for i in range(3, 7):
             self.main_window.file_table.setItem(row, i, QTableWidgetItem(""))
-
         self.main_window.file_table.sortItems(2, Qt.DescendingOrder)
 
     def process_files(self):
@@ -74,9 +89,7 @@ class FileManager(QObject):
             self.processing_thread.start()
 
     def _process_files(self):
-        # Ensure the files list is sorted by size in descending order
         sorted_files = sorted(self.main_window.files_list, key=lambda x: x[1], reverse=True)
-
         for row, (file_path, size) in enumerate(sorted_files):
             if self.stop_requested:
                 print("Stop requested, terminating file processing")
@@ -86,10 +99,7 @@ class FileManager(QObject):
             print(f"Processing file: {file_path}, size: {size} MB")
             self.processed_files.add(file_path)
             self.video_processor.process_video(row, file_path, size)
-
-        # When the queue is finished, reset the Start/Stop button
         self.main_window.reset_start_button()
-
 
     def stop_processing(self):
         self.stop_requested = True
@@ -98,26 +108,23 @@ class FileManager(QObject):
     def update_length(self, row, length):
         print(f"Updating length for row {row}: {length}")
         self.main_window.file_table.setItem(row, 4, QTableWidgetItem(length))
-        self.main_window.file_table.viewport().update()  # Force table update to refresh UI
+        self.main_window.file_table.viewport().update()
 
     def update_mb_per_min(self, row, mb_per_min, is_calculation=False):
         print(f"Updating MB/min for row {row}: {mb_per_min}")
         column = 3 if is_calculation else 6
         self.main_window.file_table.setItem(row, column, NumericTableWidgetItem(mb_per_min))
-        self.main_window.file_table.viewport().update()  # Force table update to refresh UI
+        self.main_window.file_table.viewport().update()
 
     def update_status(self, row, status):
         try:
             print(f"Updating status for row {row}: {status}")
             self.main_window.file_table.setItem(row, 1, QTableWidgetItem(status))
-            self.main_window.file_table.viewport().update()  # Force table update to refresh UI
+            self.main_window.file_table.viewport().update()
         except Exception as e:
             print(f"Error updating status for row {row}: {e}")
 
     def calculate_mb_min(self):
-        """
-        Start the calculation of MB/min for each video file in the queue without processing the file.
-        """
         if not self.calculate_thread or not self.calculate_thread.is_alive():
             self.stop_requested = False
             print("Starting calculation thread")
@@ -125,45 +132,26 @@ class FileManager(QObject):
             self.calculate_thread.start()
 
     def _calculate_mb_min(self):
-        """
-        Perform the actual calculation process in a separate thread.
-        This calculation is only for the original file, not the output.
-        """
-        # Ensure the files list is sorted by size in descending order
         sorted_files = sorted(self.main_window.files_list, key=lambda x: x[1], reverse=True)
-
         for row, (file_path, size) in enumerate(sorted_files):
             if self.stop_requested:
                 print("Calculation canceled")
                 break
             print(f"Calculating MB/min for file: {file_path}, Original size: {size} MB")
-            
-            # Verify file length
             length_seconds = self.video_processor.get_video_length(file_path)
             if length_seconds is not None:
-                # Log length for verification
                 print(f"Video length: {length_seconds} seconds for file {file_path}")
-
                 length_formatted = self.video_processor.format_length(length_seconds)
                 mb_per_min = self.video_processor.calculate_mb_per_min(size, length_seconds)
-
-                # Log calculated MB/min for verification
                 print(f"Calculated MB/min: {mb_per_min}")
-
-                # Update the table with calculated values for the original file
                 self.update_length(row, length_formatted)
                 self.update_mb_per_min(row, mb_per_min, is_calculation=True)
                 self.update_status(row, "Calculated")
             else:
                 self.update_status(row, "Error calculating")
             QApplication.processEvents()
-
-        # When calculation is done, reset the Calculate/Cancel button
         self.main_window.reset_calculate_button()
 
     def stop_estimation(self):
-        """
-        Stop the calculation process if it's running.
-        """
         self.stop_requested = True
         print("Stop calculation requested")

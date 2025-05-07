@@ -10,9 +10,7 @@ from PyQt5.QtCore import Qt
 from file_manager import FileManager, NumericTableWidgetItem
 
 def resource_path(relative_path):
-    """Get absolute path to resource, works for dev and for PyInstaller"""
     if hasattr(sys, '_MEIPASS'):
-        # PyInstaller creates a temp folder and stores path in _MEIPASS
         return os.path.join(sys._MEIPASS, relative_path)
     return os.path.join(os.path.abspath("."), relative_path)
 
@@ -20,11 +18,9 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.file_manager = FileManager(self)
-        self.files_list = []  # List to store file paths
-        self.current_speed = ''  # Initialize the current speed display
+        self.files_list = []
+        self.current_speed = ''
         self.initUI()
-
-        # Connect the progress_updated signal to the update_progress method
         self.file_manager.video_processor.progress_updated.connect(self.update_progress)
         self.file_manager.video_processor.speed_updated.connect(self.update_speed)
 
@@ -39,44 +35,35 @@ class MainWindow(QMainWindow):
         central_widget.setLayout(layout)
         self.setCentralWidget(central_widget)
 
-        # Add folder path label
         self.folder_path_label = QLabel("Folder: ")
         self.folder_path_label.setObjectName("folderPathLabel")
         layout.addWidget(self.folder_path_label)
 
-        # Create a horizontal layout for the top row
         top_row_layout = QHBoxLayout()
 
-        # Create a frame for the checkboxes and sliders with a dark background
         options_frame = QFrame(self)
         options_frame.setObjectName("optionsFrame")
         options_frame.setStyleSheet("background-color: rgba(0, 0, 0, 150); border-radius: 10px; padding: 10px;")
         grid_layout = QGridLayout(options_frame)
 
-        # Add Normalize checkbox
         self.normalize_checkbox = QCheckBox("Normalize")
         self.normalize_checkbox.setChecked(True)
         grid_layout.addWidget(self.normalize_checkbox, 0, 0)
 
-        # Add Stereo checkbox
         self.stereo_checkbox = QCheckBox("Stereo")
         self.stereo_checkbox.setChecked(True)
         grid_layout.addWidget(self.stereo_checkbox, 0, 1)
 
-        # Add Replace checkbox
         self.replace_checkbox = QCheckBox("Replace")
         self.replace_checkbox.setChecked(True)
         grid_layout.addWidget(self.replace_checkbox, 1, 0)
 
-        # Add Convert checkbox
         self.convert_checkbox = QCheckBox("Convert")
         self.convert_checkbox.setChecked(True)
         grid_layout.addWidget(self.convert_checkbox, 1, 1)
 
-        # Add the options frame to the top row layout
         top_row_layout.addWidget(options_frame)
 
-        # Add MB/min slider
         mb_min_frame = QFrame()
         mb_min_frame.setObjectName("sliderFrame")
         mb_min_layout = QVBoxLayout(mb_min_frame)
@@ -92,7 +79,6 @@ class MainWindow(QMainWindow):
         mb_min_layout.addWidget(self.mb_min_slider)
         top_row_layout.addWidget(mb_min_frame)
 
-        # Add Threshold input box
         threshold_frame = QFrame()
         threshold_frame.setObjectName("sliderFrame")
         threshold_layout = QVBoxLayout(threshold_frame)
@@ -105,12 +91,11 @@ class MainWindow(QMainWindow):
         threshold_layout.addWidget(self.threshold_input)
         top_row_layout.addWidget(threshold_frame)
 
-        # Add stacked buttons
         stacked_button_layout = QVBoxLayout()
         self.movies_button = QPushButton("Movies")
         self.television_button = QPushButton("Television")
         self.animation_button = QPushButton("Animation")
-        button_height = 100 // 3  # Height of each stacked button
+        button_height = 100 // 3
         self.movies_button.setFixedSize(100, button_height)
         self.television_button.setFixedSize(100, button_height)
         self.animation_button.setFixedSize(100, button_height)
@@ -119,50 +104,39 @@ class MainWindow(QMainWindow):
         stacked_button_layout.addWidget(self.animation_button)
         top_row_layout.addLayout(stacked_button_layout)
 
-        # Connect buttons to their respective methods
         self.movies_button.clicked.connect(self.set_movies)
         self.television_button.clicked.connect(self.set_television)
         self.animation_button.clicked.connect(self.set_animation)
 
-        # Add Browse button
         self.browse_button = QPushButton("Browse")
         self.browse_button.setFixedSize(100, 100)
         self.browse_button.clicked.connect(self.file_manager.browse_folder)
         top_row_layout.addWidget(self.browse_button)
 
-        # Add Start button
         self.start_button = QPushButton("Start")
         self.start_button.setFixedSize(100, 100)
         self.start_button.clicked.connect(self.on_start_pressed)
         top_row_layout.addWidget(self.start_button)
 
-        # Add Calculate button (Toggle between Calculate/Cancel)
         self.calculate_button = QPushButton("Calculate")
         self.calculate_button.setFixedSize(100, 100)
         self.calculate_button.clicked.connect(self.on_calculate_pressed)
         top_row_layout.addWidget(self.calculate_button)
 
-        # Add the top row layout to the main layout
         layout.addLayout(top_row_layout)
 
-        # File table
         self.file_table = QTableWidget(0, 7)
         self.file_table.setHorizontalHeaderLabels(["Filename", "Status", "MB before", "MB/min before", "Length", "MB after", "MB/min after"])
-
-        # Set the section resize mode for the filename column
         self.file_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
         for i in range(1, 6):
             self.file_table.horizontalHeader().setSectionResizeMode(i, QHeaderView.ResizeToContents)
-
         self.file_table.horizontalHeader().setFont(QFont("Arial", 10, QFont.Bold))
         self.file_table.verticalHeader().setVisible(False)
-        self.file_table.setSortingEnabled(False)  # Disable manual sorting
-
+        self.file_table.setSortingEnabled(False)
         layout.addWidget(self.file_table)
 
-        # Add a progress bar at the bottom of the layout
         self.progress_bar = QProgressBar(self)
-        self.progress_bar.setValue(0)  # Initialize the progress bar at 0%
+        self.progress_bar.setValue(0)
         layout.addWidget(self.progress_bar)
 
         self.load_settings()
@@ -186,15 +160,15 @@ class MainWindow(QMainWindow):
     def on_start_pressed(self):
         if self.start_button.text() == "Start":
             self.start_button.setText("Stop")
-            self.progress_bar.setValue(0)  # Reset the progress bar to 0%
-            self.current_speed = ''  # Reset the speed display
-            self.progress_bar.setFormat("%p%")  # Reset the progress bar format
+            self.progress_bar.setValue(0)
+            self.current_speed = ''
+            self.progress_bar.setFormat("%p%")
             self.file_manager.process_files()
         else:
             self.start_button.setText("Start")
             self.file_manager.stop_processing()
-            self.progress_bar.setValue(0)  # Reset the progress bar to 0%
-            self.progress_bar.setFormat("%p%")  # Reset the progress bar format
+            self.progress_bar.setValue(0)
+            self.progress_bar.setFormat("%p%")
 
     def on_calculate_pressed(self):
         if self.calculate_button.text() == "Calculate":
@@ -205,19 +179,12 @@ class MainWindow(QMainWindow):
             self.file_manager.stop_estimation()
 
     def reset_start_button(self):
-        """
-        Reset the Start/Stop button to the 'Start' state after processing is done.
-        """
         self.start_button.setText("Start")
 
     def reset_calculate_button(self):
-        """
-        Reset the Calculate/Cancel button to the 'Calculate' state after calculation is done.
-        """
         self.calculate_button.setText("Calculate")
 
     def update_progress(self, progress):
-        # Update progress with percentage and speed if available
         speed = self.current_speed if self.current_speed else ''
         self.progress_bar.setFormat(f"{progress:.1f}% {speed}")
         self.progress_bar.setValue(int(progress))
@@ -232,16 +199,12 @@ class MainWindow(QMainWindow):
             palette = QPalette()
             palette.setBrush(QPalette.Window, QBrush(pixmap))
             self.setPalette(palette)
-        else:
-            print("Failed to load background image")
-            
+
     def apply_stylesheet(self):
         style_path = resource_path('style.qss')
         if os.path.exists(style_path):
             with open(style_path, 'r') as f:
                 self.setStyleSheet(f.read())
-        else:
-            print("Failed to load stylesheet")
 
     def save_settings(self):
         config = configparser.ConfigParser()
@@ -250,6 +213,7 @@ class MainWindow(QMainWindow):
             'stereo': self.stereo_checkbox.isChecked(),
             'replace': self.replace_checkbox.isChecked(),
             'convert': self.convert_checkbox.isChecked(),
+            'last_folder': getattr(self, 'current_folder', '')
         }
         with open('settings.ini', 'w') as configfile:
             config.write(configfile)
@@ -263,6 +227,10 @@ class MainWindow(QMainWindow):
             self.stereo_checkbox.setChecked(settings.getboolean('stereo', True))
             self.replace_checkbox.setChecked(settings.getboolean('replace', True))
             self.convert_checkbox.setChecked(settings.getboolean('convert', True))
+            last_folder = settings.get('last_folder', '')
+            if os.path.isdir(last_folder):
+                self.current_folder = os.path.normpath(last_folder).replace('\\', '/')
+                self.folder_path_label.setText(f"Folder: {self.current_folder}")
 
 def main():
     app = QApplication(sys.argv)
@@ -271,7 +239,6 @@ def main():
         app.aboutToQuit.connect(ex.save_settings)
         sys.exit(app.exec_())
     except KeyboardInterrupt:
-        print("Application interrupted. Cleaning up...")
         sys.exit(0)
 
 if __name__ == '__main__':
