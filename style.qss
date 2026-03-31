@@ -1,78 +1,147 @@
+QWidget {
+    background-color: __WINDOW_BG__;
+    color: __TEXT__;
+    font-size: 12px;
+}
+
+QFrame#optionsFrame,
+QFrame#sliderFrame {
+    background-color: __CARD_BG__;
+    border: 1px solid __CARD_BORDER__;
+    border-radius: 12px;
+    padding: 6px;
+}
+
+QLabel {
+    color: __TEXT__;
+    background-color: transparent;
+}
+
+QLabel#folderPathLabel {
+    background-color: __CARD_BG__;
+    border: 1px solid __CARD_BORDER__;
+    border-radius: 10px;
+    color: __MUTED_TEXT__;
+    padding: 6px 8px;
+}
+
 QPushButton {
-    font: bold 14px;
-    color: white;
-    background-color: rgba(51, 51, 51, 180); /* Semi-transparent background for buttons */
-    border: 2px solid #555555;
-    padding: 5px;
+    font: bold 13px;
+    color: __BUTTON_TEXT__;
+    background-color: __BUTTON_BG__;
+    border: none;
+    padding: 6px 12px;
     border-radius: 10px;
 }
 
-QTableWidget {
-    background-color: rgba(0, 0, 0, 120); /* Darker semi-transparent background for better readability */
-    gridline-color: #333333;
-    color: #ffffff;
+QPushButton:hover {
+    background-color: __BUTTON_HOVER__;
 }
 
-QTableWidget::item {
-    background-color: rgba(0, 0, 0, 50); /* Lighter semi-transparency for items to see background */
-    color: white;
+QPushButton:pressed {
+    background-color: __BUTTON_PRESSED__;
 }
 
-QHeaderView::section {
-    background-color: rgba(51, 51, 51, 180); /* Semi-transparent background for column headers */
-    padding: 4px;
-    border: 1px solid #444444;
-    font-size: 12px;
-    color: white;
+QCheckBox {
+    background-color: transparent;
+    color: __TEXT__;
+    spacing: 8px;
 }
 
-QLabel, QCheckBox, QLineEdit {
-    font: 12px;
-    color: #ffffff;
-    background-color: rgba(0, 0, 0, 50); /* Semi-transparent background for labels, checkboxes, and text input */
-    padding: 2px;
-    border-radius: 5px;
+QCheckBox::indicator {
+    width: 16px;
+    height: 16px;
 }
 
-QSlider::groove:horizontal, QSlider::groove:vertical {
-    border: 1px solid #bbb;
-    background: #333;
-    height: 10px;
+QCheckBox::indicator:unchecked {
+    border: 1px solid __INPUT_BORDER__;
+    border-radius: 4px;
+    background-color: __INPUT_BG__;
+}
+
+QCheckBox::indicator:checked {
+    border: 1px solid __ACCENT__;
+    border-radius: 4px;
+    background-color: __ACCENT__;
+}
+
+QLineEdit,
+QComboBox {
+    background-color: __INPUT_BG__;
+    color: __TEXT__;
+    border: 1px solid __INPUT_BORDER__;
+    border-radius: 8px;
+    padding: 6px 8px;
+}
+
+QComboBox::drop-down {
+    border: none;
+    width: 18px;
+}
+
+QComboBox QAbstractItemView {
+    background-color: __INPUT_BG__;
+    color: __TEXT__;
+    border: 1px solid __INPUT_BORDER__;
+    selection-background-color: __ACCENT_SOFT__;
+    selection-color: __TEXT__;
+}
+
+QSlider::groove:horizontal {
+    border: none;
+    background: __SLIDER_GROOVE__;
+    height: 8px;
     border-radius: 4px;
 }
 
-QSlider::handle:horizontal, QSlider::handle:vertical {
-    background: #444;
-    border: 1px solid #444;
-    width: 14px;
-    height: 14px;
-    margin: -4px 0; /* centering the handle */
-    border-radius: 7px;
+QSlider::handle:horizontal {
+    background: __SLIDER_HANDLE__;
+    border: none;
+    width: 16px;
+    margin: -4px 0;
+    border-radius: 8px;
 }
 
-QFrame#sliderFrame {
-    background-color: rgba(0, 0, 0, 0.5);
-    border-radius: 5px;
-    padding: 5px;
-}
-
-QSlider#horizontalSlider {
-    max-height: 20px;
-}
-
-/* ProgressBar Styling */
-QProgressBar {
-    background-color: rgba(0, 0, 0, 50); /* Semi-transparent background */
-    border: 2px solid #444444;
+QTableWidget {
+    background-color: __TABLE_BG__;
+    alternate-background-color: __TABLE_ALT__;
+    gridline-color: __GRID__;
+    color: __TEXT__;
+    border: 1px solid __CARD_BORDER__;
     border-radius: 10px;
-    text-align: center; /* Center text */
-    color: #ffffff; /* White text color */
-    font: bold 14px; /* Bold font for better readability */
+}
+
+QTableWidget::item {
+    padding: 4px;
+    border: none;
+}
+
+QTableWidget::item:selected {
+    background-color: __ACCENT_SOFT__;
+    color: __TEXT__;
+}
+
+QHeaderView::section {
+    background-color: __HEADER_BG__;
+    color: __TEXT__;
+    padding: 6px;
+    border: none;
+    border-bottom: 1px solid __GRID__;
+    border-right: 1px solid __GRID__;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+QProgressBar {
+    background-color: __PROGRESS_BG__;
+    border: 1px solid __CARD_BORDER__;
+    border-radius: 10px;
+    text-align: center;
+    color: __TEXT__;
+    font: bold 13px;
 }
 
 QProgressBar::chunk {
-    background-color: #00cc66; /* Green color for the progress chunk */
+    background-color: __ACCENT__;
     border-radius: 10px;
 }
-
-/* End of style.qss */
