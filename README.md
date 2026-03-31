@@ -1,159 +1,200 @@
-
 # EZ_ffmpeg
 
-## Screenshots
+Batch video recompression with a desktop UI for FFmpeg.
 
-![EZ_ffmpeg GUI Screenshot](screenshots/09-10-2024_01.jpg)
+EZ_ffmpeg scans a folder recursively, builds a queue of video files, analyzes them, and processes them one at a time using bitrate targets based on MB/min. The app now supports CPU and NVIDIA GPU encoder selection, queue analysis, live ETA reporting, temp-folder selection, replace-or-save output handling, and built-in light/dark themes.
 
-EZ_ffmpeg is a simple yet powerful tool designed to shrink video files using the x265 encoding format and 192kbps MP3 audio. The application allows users to easily control the size of the output video by specifying an MB/min value, offering a straightforward way to optimize video storage and quality. Additionally, EZ_ffmpeg provides options for audio normalization and stereo flattening, ensuring that your media files maintain consistent audio quality. The application also includes presets that allow users to quickly select predefined ratios for optimal media output.
+## Screenshot
 
-## Features
+![EZ_ffmpeg screenshot](screenshots/03-30-2026_01.jpg)
 
-- **Video Shrinking:** Easily reduce the size of your video files using a specified MB/min value, with x265 encoding and 192kbps MP3 audio.
-- **Audio Normalization:** Normalize the audio levels across your video files to ensure consistent volume.
-- **Stereo Flattening:** Convert audio tracks to stereo to ensure compatibility and consistent playback quality.
-- **Presets:** Quickly apply predefined settings for Movies, Television, and Animation for optimal media output.
-- **Customizable Options:** Adjust MB/min value, apply normalization, stereo flattening, and decide whether to replace the original file.
-- **User-Friendly Interface:** A clean and intuitive UI that allows even novice users to shrink videos with ease.
-- **Estimation Mode:** The Estimate button allows users to estimate the MB/min for each file without processing, helping users plan and optimize file conversion.
-- **Start/Stop Toggle:** Both the Start and Estimate buttons toggle between Start/Stop and Estimate/Cancel states, respectively, providing clear controls for the current operation.
+## What It Does
 
-## Getting Started
+- Recursively scans a folder for video files and queues them by size.
+- Sorts the queue largest-first after loading.
+- Analyzes source duration, codec, resolution, audio info, and MB/min before processing.
+- Supports encoder selection:
+  - `CPU H.265 (libx265)`
+  - `GPU H.264 (h264_nvenc)`
+  - `GPU H.265 (hevc_nvenc)`
+  - `GPU AV1 (av1_nvenc)` when available
+  - `Auto`
+- Shows live per-file progress, speed, elapsed time, and ETA.
+- Shows queue-level ETA, finish time, completion counts, and total space saved.
+- Uses a temp/cache folder for work files and lets you choose where that cache lives.
+- Replaces the original after validation when `Replace` is enabled.
+- Saves a uniquely named `_processed` file beside the source when `Replace` is disabled.
+- Includes a default light theme and an alternate dark theme.
 
-### Prerequisites
+## Requirements
 
-- **Python 3.6+**
-- **PyQt5:** Install using pip
+- Python 3
+- `ffmpeg` and `ffprobe` available in `PATH`
+- PyQt5
 
-```bash
-pip install PyQt5
-```
-
-- **ffmpeg:** Ensure ffmpeg is installed and accessible in your system's PATH.
-
-### Installation
-
-1. Clone the repository:
-
-```bash
-git clone https://github.com/blahpunk/EZ_ffmpeg.git
-cd EZ_ffmpeg
-```
-
-2. Install the required Python packages:
+Install Python dependencies with:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Run the application:
+## Installation
 
 ```bash
+git clone https://github.com/blahpunk/EZ_ffmpeg.git
+cd EZ_ffmpeg
+pip install -r requirements.txt
 python main.py
 ```
 
-## Running the Application
+## Workflow
 
-After launching the application, follow these steps:
+1. Click `Browse` and choose the root folder you want to scan.
+2. Wait for the queue to finish loading and sort largest-first.
+3. Set your processing options:
+   - `Normalize`
+   - `Stereo`
+   - `Replace`
+   - `Convert`
+   - `MB/min`
+   - `Threshold`
+   - `Encoder`
+   - `Theme`
+   - `Temp Folder`
+4. Optionally click `Analyze` to populate queue metadata and estimated runtimes before processing.
+5. Click `Start` to begin conversion.
+6. If you press `Stop`, choose whether to:
+   - finish the current file and stop the queue after it completes
+   - abort immediately
+   - cancel the stop request
 
-1. **Browse:** Select the folder containing the video files you want to process by clicking the "Browse" button.
+## Main Controls
 
-2. **Adjust Settings:**
-    - **Convert:** Enable or disable video conversion. If unchecked, only audio normalization and stereo flattening will be applied.
-    - **Normalize:** Check this box to normalize audio levels.
-    - **Stereo:** Check this box to flatten the audio to stereo.
-    - **Replace:** Check this box to replace the original file with the processed file.
-    - **MB/min Slider:** Adjust the slider to set the target MB/min value for the output video. This directly controls the video bitrate.
-    - **Threshold:** Enter a threshold value that allows some flexibility in the MB/min ratio during processing.
+### Folder And Temp Paths
 
-3. **Presets:** Quickly apply settings by selecting one of the presets:
-    - **Movies:** Optimizes for standard movie output with a balanced MB/min value.
-    - **Television:** Adjusts settings for television shows.
-    - **Animation:** Lowers the MB/min value and threshold for animated content, which typically requires less bitrate.
+- `Folder`: Shows the source folder currently loaded into the queue.
+- `Temp Folder`: Chooses the parent location for the app cache. EZ_ffmpeg uses a dedicated `ez_ffmpeg_cache` subfolder inside the selected location.
 
-4. **Estimate Mode:** Use the "Estimate" button to estimate the MB/min value for files in the queue without performing any actual processing. The button will toggle between "Estimate" and "Cancel," providing flexibility during estimation.
+### Processing Options
 
-5. **Start Processing:** Once all settings are configured, click "Start" to begin processing your files. The "Start" button will toggle between "Start" and "Stop" states, allowing you to pause or cancel the process.
+- `Normalize`: Re-encodes audio with `dynaudnorm`.
+- `Stereo`: Downmixes audio to 2 channels.
+- `Replace`: Replaces the original file after output validation succeeds.
+- `Convert`: Forces audio re-encoding to AAC. If disabled and no audio processing is required, audio can be copied.
+- `MB/min`: Sets the approximate target size budget per minute.
+- `Threshold`: Skips files that are already below the target plus threshold.
+- `Encoder`: Selects the active video encoder mode.
 
-## User Interface (UI) Elements
+### Presets
 
-### Checkboxes and Sliders
+- `Movies`
+- `Television`
+- `Animation`
 
-- **Convert:** Toggles the conversion of video files. If unchecked, the video stream is not re-encoded, and only the audio normalization and stereo options are applied.
-- **Normalize:** Applies dynamic audio normalization to the primary audio track.
-- **Stereo:** Converts the primary audio track to stereo.
-- **Replace:** If checked, the original file will be replaced by the processed file. If unchecked, the processed file will be saved with a different name in the same folder.
-- **MB/min Slider:** Sets the target size of the output file by controlling the bitrate. A higher MB/min value results in higher video quality but larger file size.
-- **Threshold:** Provides a buffer around the MB/min value, allowing for some flexibility in the file size calculation.
+These presets adjust the `MB/min` slider and threshold for quicker setup.
 
-### Buttons
+### Queue Actions
 
-- **Browse:** Opens a file dialog to select the folder containing video files to be processed.
-- **Start/Stop:** Begins the processing of files or stops the ongoing process.
-- **Estimate/Cancel:** Begins estimation of MB/min values or cancels the ongoing estimation.
-- **Movies/Television/Animation:** Applies predefined settings for quick optimization based on content type.
+- `Analyze`: Runs a metadata and estimate pass without encoding.
+- `Start`: Starts processing from the top of the queue.
+- `Stop`: Opens a stop dialog while processing.
 
-### Table
+## Queue Columns
 
-- **Filename:** Displays the name of the video file being processed.
-- **Status:** Shows the current status of the file processing (e.g., Queued, Compressing, Completed).
-- **MB before:** Shows the size of the file before processing.
-- **MB/min before:** Displays the MB/min value of the file before processing.
-- **Length:** Shows the duration of the video.
-- **MB after:** Displays the size of the file after processing.
-- **MB/min after:** Shows the MB/min value of the file after processing.
+- `Filename`
+- `Status`
+- `Encoder`
+- `Codec`
+- `Resolution`
+- `Audio`
+- `MB before`
+- `MB/min before`
+- `Length`
+- `ETA`
+- `Elapsed`
+- `Avg speed`
+- `MB after`
+- `MB/min after`
 
-## Console Output
+## Processing Statuses
 
-A text area at the bottom of the UI displays the console output from ffmpeg during processing, including any errors or status updates.
+During processing you may see statuses such as:
 
-## Contributing
+- `Probing`
+- `Checking thresholds`
+- `Copying to cache`
+- `Launching encoder`
+- `Processing`
+- `Finalizing`
+- `Replacing`
+- `Moving output`
+- `Completed`
+- `Skipped`
 
-Contributions are welcome! Please fork the repository and submit a pull request with your changes.
+## Output Rules
+
+### When `Replace` Is Enabled
+
+- The file is encoded into the temp/cache folder first.
+- The result is validated:
+  - output must be smaller than the source
+  - output duration must be close to the source duration
+- If validation passes, the original is replaced.
+
+### When `Replace` Is Disabled
+
+- The file is encoded into the temp/cache folder first.
+- After validation, the processed file is moved into the source directory.
+- The filename uses `_processed`.
+- If that name already exists, the app creates `_processed_1`, `_processed_2`, and so on instead of overwriting.
+
+## Temp Files And Cleanup
+
+- EZ_ffmpeg uses a dedicated cache folder for copied inputs and temporary outputs.
+- Stale cache files are cleaned on startup.
+- If the app is closed while work is in progress, it attempts to abort active work and clean up partial temp artifacts.
+- Encode history is preserved separately so runtime estimates can improve over time.
+
+## Themes
+
+- `Light` is the default theme.
+- `Dark` is the alternate theme.
+- The selected theme is saved in `settings.ini` and restored at launch.
+
+## Settings Persistence
+
+The app remembers:
+
+- normalize / stereo / replace / convert
+- selected encoder
+- selected theme
+- selected temp folder
+- last browsed source folder
+
+## Notes
+
+- Queue estimates are best after running `Analyze` or after the app has built some encode-history data.
+- Encoder availability depends on the FFmpeg build installed on your system.
+- On Windows, cross-drive replacement is handled during finalization so cache folders and source libraries can live on different drives.
+
+## Troubleshooting
+
+### FFmpeg Not Found
+
+Make sure both `ffmpeg` and `ffprobe` are installed and available in `PATH`.
+
+### NVIDIA Encoders Not Showing Up
+
+Your FFmpeg build, driver, or GPU may not expose NVENC/AV1 support. The app only shows encoder modes that FFmpeg reports as available.
+
+### Processed File Was Skipped
+
+If a file is already below the target `MB/min + Threshold`, the app skips it instead of making it larger or wasting time re-encoding.
+
+### Replace Failed
+
+Replacement only happens after validation. If replacement fails, the status column will show the error and the original file is left in place.
 
 ## License
 
-This project is licensed under the MIT License. See the LICENSE file for more details.
-
-## Acknowledgments
-
-- **ffmpeg:** The powerful multimedia framework used for processing video and audio.
-- **PyQt5:** The Python bindings for the Qt application framework, used to create the user interface.
-
-### Setting Up `ffmpeg`
-Ensure `ffmpeg` is installed and accessible via the command line:
-- **Windows**: Add the `ffmpeg` binary to your PATH.
-- **Linux**: Install `ffmpeg` via your package manager (e.g., `sudo apt-get install ffmpeg`).
-
-## Usage
-
-### Running the Application
-1. **Start the Application**:
-   ```bash
-   python main.py
-   ```
-
-2. **Select a Folder**:
-   - Use the "Browse" button to select the folder containing the video files you want to process.
-
-3. **Adjust Video Settings**:
-   - Utilize the user interface to adjust various video settings such as the MB/min rate and audio track conversion options.
-
-4. **Estimate File Size**:
-   - Click the "Estimate" button to estimate the MB/min value for each file in the queue without processing.
-
-5. **Start Processing**:
-   - Click the "Start" button to begin processing. The application will display real-time progress and status updates.
-
-## Contributing
-Contributions are welcome! To contribute:
-- Fork the repository.
-- Create a new branch for your feature or bug fix.
-- Commit your changes and push them to your branch.
-- Submit a pull request.
-
-## License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgements
-Special thanks to the `ffmpeg` community for their powerful media processing tools.
+This project is licensed under the MIT License. See [LICENSE](LICENSE).
