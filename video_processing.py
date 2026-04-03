@@ -328,8 +328,22 @@ class VideoProcessor(QObject):
 
     def enqueue_output(self, stream, queue):
         try:
-            for line in iter(stream.readline, ''):
-                queue.put(line)
+            buffer = ""
+            while True:
+                chunk = stream.read(4096)
+                if not chunk:
+                    break
+
+                buffer += chunk.decode('utf-8', errors='replace')
+                parts = re.split(r'[\r\n]+', buffer)
+                buffer = parts.pop() if parts else ""
+
+                for line in parts:
+                    if line:
+                        queue.put(line)
+
+            if buffer.strip():
+                queue.put(buffer)
         except Exception as exc:
             print(f"Error in enqueue_output: {exc}")
         finally:
@@ -466,8 +480,7 @@ class VideoProcessor(QObject):
                 cmd,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.PIPE,
-                text=True,
-                bufsize=1,
+                bufsize=0,
             )
             self.current_process = process
             queue = Queue()
