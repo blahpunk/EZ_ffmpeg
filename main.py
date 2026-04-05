@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import (
     QComboBox, QMessageBox, QFileDialog
 )
 from PyQt5.QtGui import QFont
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 from file_manager import FileManager
 from table_columns import TABLE_HEADERS
 
@@ -234,6 +234,7 @@ class MainWindow(QMainWindow):
         self.encoder_combo.currentIndexChanged.connect(self.on_encoder_changed)
         self.theme_combo.currentTextChanged.connect(self.on_theme_changed)
         self.show()
+        QTimer.singleShot(0, self.apply_current_theme)
 
     def update_mb_min_label(self, value):
         self.mb_min_label.setText(f"MB/min: {value}")
@@ -270,6 +271,13 @@ class MainWindow(QMainWindow):
 
     def on_theme_changed(self, theme_name):
         self.apply_stylesheet(theme_name)
+        self.file_table.viewport().update()
+        self.file_table.repaint()
+
+    def apply_current_theme(self):
+        self.apply_stylesheet(self.get_selected_theme())
+        self.file_table.viewport().update()
+        self.file_table.repaint()
 
     def update_temp_folder_label(self):
         self.temp_folder_label.setText(f"Temp: {self.file_manager.video_processor.cache_folder}")

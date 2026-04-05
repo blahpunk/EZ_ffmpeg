@@ -4,8 +4,8 @@ import mimetypes
 import configparser
 from datetime import datetime, timedelta
 
-from PyQt5.QtWidgets import QFileDialog, QTableWidgetItem, QApplication
-from PyQt5.QtCore import pyqtSignal, QObject, Qt
+from PyQt5.QtWidgets import QFileDialog, QTableWidgetItem
+from PyQt5.QtCore import pyqtSignal, QObject, Qt, QTimer
 
 from table_columns import (
     COLUMN_AUDIO,
@@ -45,7 +45,6 @@ class FileLoader(QObject):
                     size_mb = os.path.getsize(file_path) / (1024 * 1024)
                     self.file_loaded.emit(file_path, size_mb)
                     print(f"File loaded: {file_path}, size: {size_mb} MB")
-                    QApplication.processEvents()
         self.loading_finished.emit()
 
 
@@ -65,14 +64,19 @@ class FileManager(QObject):
         self.records_by_row = {}
         self.records_by_path = {}
         self.file_loader = FileLoader(main_window)
-        self.file_loader.file_loaded.connect(self.add_file_to_table)
-        self.file_loader.loading_finished.connect(self.sort_table_by_size)
+        self.file_loader.file_loaded.connect(self.add_file_to_table, type=Qt.QueuedConnection)
+        self.file_loader.loading_finished.connect(self.on_loading_finished, type=Qt.QueuedConnection)
         self.video_processor = VideoProcessor(main_window)
         self.video_processor.analysis_updated.connect(self.update_analysis)
         self.video_processor.output_updated.connect(self.update_output)
         self.video_processor.status_updated.connect(self.update_status)
         self.video_processor.runtime_updated.connect(self.update_runtime)
         self.video_processor.encoder_updated.connect(self.update_encoder)
+        self.analysis_complete.connect(self.on_analysis_finished, type=Qt.QueuedConnection)
+        self.post_load_sort_pending = False
+        self.live_sort_timer = QTimer(self)
+        self.live_sort_timer.setSingleShot(True)
+        self.live_sort_timer.timeout.connect(self.sort_table_by_size)
 
     def browse_folder(self):
         default_path = ''
@@ -93,6 +97,7 @@ class FileManager(QObject):
             self.current_processing_row = None
             self.stop_requested = False
             self.video_processor.stop_requested = False
+            self.post_load_sort_pending = False
             self.queue_summary_updated.emit("Current file ETA: -- | Queue remaining: -- | Finish: --")
             self.queue_stats_updated.emit("Queued: 0 | Processing: 0 | Completed: 0 | Skipped: 0 | Failed: 0 | Saved: 0.00 MB")
             print(f"Selected folder: {folder_path}")
@@ -123,7 +128,6 @@ class FileManager(QObject):
             COLUMN_CODEC,
             COLUMN_RESOLUTION,
             COLUMN_AUDIO,
-            COLUMN_MB_PER_MIN_BEFORE,
             COLUMN_LENGTH,
             COLUMN_ETA,
             COLUMN_ELAPSED,
@@ -132,6 +136,7 @@ class FileManager(QObject):
             COLUMN_MB_PER_MIN_AFTER,
         ):
             self.main_window.file_table.setItem(row, column, QTableWidgetItem(""))
+        self.main_window.file_table.setItem(row, COLUMN_MB_PER_MIN_BEFORE, NumericTableWidgetItem(None))
 
         record = {
             'row': row,
@@ -154,6 +159,28 @@ class FileManager(QObject):
         self.records_by_row[row] = record
         self.records_by_path[file_path] = record
         self.refresh_estimates_for_selected_encoder()
+        self.schedule_live_sort()
+
+    def on_loading_finished(self):
+        if self.post_load_sort_pending:
+            return
+
+        self.post_load_sort_pending = True
+        QTimer.singleShot(0, self.finalize_loading)
+
+    def finalize_loading(self):
+        self.post_load_sort_pending = False
+        self.sort_table_by_size(force=True)
+
+    def schedule_live_sort(self):
+        if (self.processing_thread and self.processing_thread.is_alive()) or (
+            self.calculate_thread and self.calculate_thread.is_alive()
+        ):
+            return
+
+        # Debounce table re-sorts so large scans still settle into largest-first order
+        # even if the worker thread spends a long time walking non-video folders.
+        self.live_sort_timer.start(150)
 
     def process_files(self):
         if not self.processing_thread or not self.processing_thread.is_alive():
@@ -296,7 +323,6 @@ class FileManager(QObject):
                     self.video_processor.status_updated.emit(row, "Analyzed")
                 else:
                     self.video_processor.status_updated.emit(row, "Error analyzing")
-                QApplication.processEvents()
         finally:
             self.analysis_complete.emit()
 
@@ -304,6 +330,9 @@ class FileManager(QObject):
         self.stop_requested = True
         self.video_processor.stop_requested = True
         print("Stop analysis requested")
+
+    def on_analysis_finished(self):
+        self.sort_table_by_analysis(force=True)
 
     def refresh_estimates_for_selected_encoder(self):
         selected_encoder = self.main_window.get_selected_encoder_mode()
@@ -328,9 +357,10 @@ class FileManager(QObject):
 
         self.refresh_queue_overview()
 
-    def sort_table_by_size(self):
-        if (self.processing_thread and self.processing_thread.is_alive()) or (
-            self.calculate_thread and self.calculate_thread.is_alive()
+    def sort_table_by_size(self, force=False):
+        if not force and (
+            (self.processing_thread and self.processing_thread.is_alive()) or
+            (self.calculate_thread and self.calculate_thread.is_alive())
         ):
             return
 
@@ -338,6 +368,24 @@ class FileManager(QObject):
             return
 
         self.main_window.file_table.sortItems(COLUMN_MB_BEFORE, Qt.DescendingOrder)
+        self._rebuild_row_mappings()
+        self.main_window.file_table.viewport().update()
+
+    def sort_table_by_analysis(self, force=False):
+        if not force and (
+            (self.processing_thread and self.processing_thread.is_alive()) or
+            (self.calculate_thread and self.calculate_thread.is_alive())
+        ):
+            return
+
+        if self.main_window.file_table.rowCount() <= 1:
+            return
+
+        self.main_window.file_table.sortItems(COLUMN_MB_PER_MIN_BEFORE, Qt.DescendingOrder)
+        self._rebuild_row_mappings()
+        self.main_window.file_table.viewport().update()
+
+    def _rebuild_row_mappings(self):
         self.records_by_row = {}
 
         for row in range(self.main_window.file_table.rowCount()):
@@ -352,8 +400,6 @@ class FileManager(QObject):
 
             record['row'] = row
             self.records_by_row[row] = record
-
-        self.main_window.file_table.viewport().update()
 
     def refresh_queue_overview(self):
         total_remaining_seconds = 0.0
